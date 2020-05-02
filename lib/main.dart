@@ -13,18 +13,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(title: '学习 Flutter'),
     );
   }
 }
@@ -32,106 +23,300 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-Future<List<dynamic>> fetchUserList() async {
-  final url = 'https://jsonplaceholder.typicode.com/users';
-  final response = await http.get(url);
-  if (response.statusCode == 200) {
-    return json.decode(response.body);
-  } else {
-    throw Exception('Failed to fetch user list');
-  }
-}
-
 class _MyHomePageState extends State<MyHomePage> {
-  List<String> _list = ['1', '2', '3'];
-
-  Future<List<dynamic>> futureUserList;
+  Future<List<User>> futureUserList;
+  Future<List<Post>> futurePostList;
 
   @override
   void initState() {
     super.initState();
     futureUserList = fetchUserList();
+    futurePostList = fetchPostList();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: FutureBuilder<List<dynamic>>(
-        future: futureUserList,
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            final list = snapshot.data;
-            return ListView.builder(
-              itemCount: list.length,
-              itemBuilder: (_, index) {
-                final item = list[index];
-                return GestureDetector(
-                  child: ListTile(
-                    title: Text(item['username']),
-                  ),
-                  onTap: () {
-                    Navigator.push(_, MaterialPageRoute(builder: (_) {
-                      return Scaffold(
-                        appBar: AppBar(title: Text('Item $index')),
-                        body: Container(
-                            child: Column(
-                          children: [
-                            Text('id: ${item["id"]}'),
-                            Text('name: ${item["name"]}'),
-                            Text('username: ${item["username"]}'),
-                            Text('email: ${item["email"]}'),
-                          ],
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                        )),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        drawer: Drawer(
+          child: DrawerHeader(
+            child: Text('drawer头部'),
+          ),
+        ),
+        appBar: AppBar(
+          title: Text(widget.title),
+          bottom: TabBar(
+            tabs: <Widget>[
+              Tab(
+                  icon: Icon(
+                Icons.directions_car,
+              )),
+              Tab(
+                  icon: Icon(
+                Icons.directions_transit,
+              )),
+            ],
+          ),
+        ),
+        body: TabBarView(children: [
+          Container(
+            child: FutureBuilder<List<User>>(
+              future: futureUserList,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  final list = snapshot.data;
+                  return ListView.builder(
+                    itemCount: list.length,
+                    itemBuilder: (_, index) {
+                      final item = list[index];
+                      return GestureDetector(
+                        child: ListTile(
+                          title: Text(item.name),
+                        ),
+                        onTap: () {
+                          Navigator.push(_, _createRoute(item, false));
+                        },
                       );
-                    }));
-                  },
+                    },
+                  );
+                } else if (snapshot.hasError) {
+                  return Text('Error');
+                }
+                return Center(
+                  child: CircularProgressIndicator(),
                 );
               },
-            );
-          } else if (snapshot.hasError) {
-            return Text('Error');
-          }
-          return CircularProgressIndicator();
-        },
+            ),
+          ),
+          Container(
+            child: FutureBuilder<List<Post>>(
+              future: futurePostList,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  final list = snapshot.data;
+                  return ListView.builder(
+                    itemCount: list.length,
+                    itemBuilder: (_, index) {
+                      final item = list[index];
+                      return GestureDetector(
+                        child: ListTile(
+                          title: Text(item.title),
+                        ),
+                        onTap: () {
+                          Navigator.push(_, _createRoute(item, true));
+                        },
+                      );
+                    },
+                  );
+                } else if (snapshot.hasError) {
+                  return Text('Error');
+                }
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              },
+            ),
+          ),
+        ]), // This trailing comma makes auto-formatting nicer for build methods.
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          var list = _list;
-          list.add('${_list.length + 1}');
-          setState(() {
-            _list = list;
-          });
-        },
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
+}
+
+List<User> fronUserJSON(String jsonString) {
+  List<User> newList = [];
+  List<dynamic> list = json.decode(jsonString);
+  list.forEach((l) {
+    newList.add(new User(
+      id: l['id'],
+      name: l['name'],
+      username: l['username'],
+      email: l['email'],
+      address: new Address(
+        street: l['address']['street'],
+        suite: l['address']['suite'],
+        city: l['address']['city'],
+        zipcode: l['address']['zipcode'],
+        geo: new Geo(
+          lat: l['address']['geo']['lat'],
+          lng: l['address']['geo']['lng'],
+        ),
+      ),
+      phone: l['phone'],
+      website: l['website'],
+      company: new Company(
+        name: l['company']['name'],
+        catchPhrase: l['company']['catchPhrase'],
+        bs: l['company']['bs'],
+      ),
+    ));
+  });
+  return newList;
+}
+
+List<Post> fromPostJSON(String jsonStr) {
+  List<Post> newList = [];
+  List<dynamic> list = json.decode(jsonStr);
+  list.forEach((l) {
+    newList.add(new Post(
+      id: l['id'],
+      userId: l['userId'],
+      title: l['title'],
+      body: l['body'],
+    ));
+  });
+  return newList;
+}
+
+Future<List<User>> fetchUserList() async {
+  final url = 'https://jsonplaceholder.typicode.com/users';
+  try {
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      return fronUserJSON(response.body);
+    } else {
+      throw Exception('Failed to fetch user list');
+    }
+  } catch (err) {
+    throw Exception(err);
+  }
+}
+
+Future<List<Post>> fetchPostList() async {
+  final url = 'https://jsonplaceholder.typicode.com/posts';
+  try {
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      return fromPostJSON(response.body);
+    } else {
+      throw Exception('Failed to fetch user list');
+    }
+  } catch (err) {
+    throw Exception(err);
+  }
+}
+
+Route _createRoute(dynamic item, bool isPost) {
+  return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => Page2(
+            item: item,
+            isPost: isPost,
+          ),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        var begin = Offset(1.0, 0.0);
+        var end = Offset.zero;
+        var curve = Curves.easeInOut;
+        var tween =
+            Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      });
+}
+
+class Page2 extends StatefulWidget {
+  Page2({Key key, this.item, this.isPost}) : super(key: key);
+
+  final dynamic item;
+  final bool isPost;
+
+  @override
+  _Page2State createState() => _Page2State();
+}
+
+class _Page2State extends State<Page2> {
+  dynamic item;
+  bool isPost = false;
+
+  @override
+  void initState() {
+    super.initState();
+    item = widget.item;
+    isPost = widget.isPost;
+  }
+
+  @override
+  Widget build(context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Item detail')),
+      body: Container(
+          child: Column(
+        children: isPost
+            ? [
+                Container(
+                  child: Text(
+                    item.title,
+                    style: TextStyle(fontSize: 20.0),
+                  ),
+                  padding: EdgeInsets.all(12.0),
+                ),
+                Container(
+                    padding: EdgeInsets.all(12.0), child: Text(item.body)),
+              ]
+            : [
+                Text('id: ${item.id}'),
+                Text('name: ${item.name}'),
+              ],
+        crossAxisAlignment: CrossAxisAlignment.start,
+      )),
+    );
+  }
+}
+
+class User {
+  int id;
+  String name;
+  String username;
+  String email;
+  Address address;
+  String phone;
+  String website;
+  Company company;
+  User(
+      {this.id,
+      this.name,
+      this.username,
+      this.email,
+      this.address,
+      this.phone,
+      this.website,
+      this.company});
+}
+
+class Address {
+  String street;
+  String suite;
+  String city;
+  String zipcode;
+  Geo geo;
+  Address({this.street, this.suite, this.city, this.zipcode, this.geo});
+}
+
+class Geo {
+  String lat;
+  String lng;
+  Geo({this.lat, this.lng});
+}
+
+class Company {
+  String name;
+  String catchPhrase;
+  String bs;
+  Company({this.name, this.catchPhrase, this.bs});
+}
+
+class Post {
+  int userId;
+  int id;
+  String title;
+  String body;
+  Post({this.userId, this.id, this.title, this.body});
 }
